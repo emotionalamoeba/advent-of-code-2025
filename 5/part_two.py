@@ -1,5 +1,27 @@
-# too low = 347444809832240
-# too low = 347444809832416
+def fix_overlaps(ranges):
+    result = []
+    first_range = ranges[0]
+    lowest_start = first_range[0]
+    highest_end = first_range[1]
+
+    for r_index in range(1, len(ranges)):
+        current_range = ranges[r_index]
+        start = current_range[0]
+        end = current_range[1]
+
+        if start > highest_end:
+            # We passed the overlaps, now store previous values             
+            result.append((lowest_start, highest_end))
+            lowest_start = start
+            highest_end = end
+        else:
+            # Extend the maximum to include the current range
+            highest_end = max(end, highest_end)
+
+    # Store current range
+    result.append((lowest_start, highest_end))
+
+    return result
 
 def process():
     ranges = []    
@@ -12,30 +34,17 @@ def process():
             values = line.split('-')
             ranges.append((int(values[0]), int(values[1])))                
 
+    # Sort ranges by start, then by end
     ranges.sort(key=lambda range: (range[0], range[1]))
 
-    min_ingredient = ranges[0][0]
-    max_ingredient = ranges[-1][1]
-    potential_max = max_ingredient - min_ingredient
-
+    # Remove any ranges which overlap another range   
+    ranges = fix_overlaps(ranges)
+    
     total = 0
-    gaps = []
+    for r in ranges:
+        print(f'Range {r[0]}-{r[1]}')
+        total += r[1]-r[0] + 1
 
-    # Count the gaps between ranges, then subtract from potential_max
-    for r in range(len(ranges) - 1):
-        a = ranges[r]
-        b = ranges[r+1]
-
-        if a[1] < b[0]:
-            gaps.append((a[1] + 1, b[0] - 1))
-
-    gap_total = 0
-    for g in gaps:
-        print(f'Gap ({g[0]},{g[1]})')
-        gap_total += g[1]-g[0]
-
-    print(f'Potential max {potential_max} gap total {gap_total} min_ingredient {min_ingredient} max_ingredient {max_ingredient}')
-    total = potential_max - gap_total
     print(f'Total {total}')
 
 process()
