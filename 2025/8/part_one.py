@@ -1,7 +1,9 @@
 import sys
 import math
+from functools import lru_cache
 
 # Get distance, no need for square root as we are only sorting
+@lru_cache(maxsize=None)
 def get_sq_distance(a, b):
     xa, ya, za = a
     xb, yb, zb = b
@@ -12,24 +14,22 @@ def get_sq_distance(a, b):
 
     return xd*xd + yd*yd + zd*zd
 
-def find_closest_coords(coords, connections):
+def find_closest_coords(coords, limit):
     min_dist = sys.maxsize
-    closest_coords = []
-    for coord_a in coords:
-        for coord_b in coords:
-            # Must be two different coords
-            if coord_a == coord_b:
-                continue
+    coords_with_distance = []
+    for index_a in range(len(coords)):
+        # Avoid comparing the same pair in reverse
+        for index_b in range(index_a + 1, len(coords)):
+            coord_a = coords[index_a]
+            coord_b = coords[index_b]
 
-            # Coords must not already be connected
-            if [coord_a, coord_b] in connections or [coord_b, coord_a] in connections:
-                continue
+            distance = get_sq_distance(coord_a, coord_b) 
 
-            distance = get_sq_distance(coord_a, coord_b)
-            if distance < min_dist:
-                closest_coords = [coord_a, coord_b]
-                min_dist = distance
-    return closest_coords
+            coords_with_distance.append({ 'distance': distance, 'coord_a': coord_a, 'coord_b': coord_b })            
+
+    closest_coords = sorted(coords_with_distance, key=lambda x: x['distance'])
+
+    return [(c['coord_a'], c['coord_b']) for c in closest_coords[:limit]]
 
 def outer_find_circuits(connections):
     circuit_coords = []
@@ -65,19 +65,13 @@ def remove_circuits_from_coords(circuit_coords, connections):
     return remaining_connections
 
 def process():
-    with open('test.txt', 'r') as file:
+    with open('input.txt', 'r') as file:
         coords = [tuple(int(i) for i in line.strip().split(',')) for line in file.readlines()]
 
-    connections_left = 10
-
-    connections = []
-
-    while connections_left > 0:
-        closest_coords = find_closest_coords(coords, connections)
-        connections.append(closest_coords)
-        connections_left -= 1    
-
-    # Find 'circuits' which are not connected
+    connections_limit = 1000
+    connections = find_closest_coords(coords, connections_limit)
+  
+    # Find 'circuits' which are not connected    
     connected_points = [coord for connection in connections for coord in connection]    
     singles = [p for p in coords if p not in connected_points]
 
@@ -91,7 +85,6 @@ def process():
     total = math.prod(circuit_counts[0:3])
 
     print(f'Total {total}')
-
 
 process()
 
